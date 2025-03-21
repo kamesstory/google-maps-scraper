@@ -8,7 +8,6 @@ class SafariAutomation:
     def __init__(self):
         self.applescript_template = """
         tell application "Safari"
-            activate
             {command}
         end tell
         """
@@ -47,7 +46,6 @@ class SafariAutomation:
             bool: True if navigation was successful
         """
         command = f"""
-        activate
         if (count of windows) = 0 then
             make new document
         end if

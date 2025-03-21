@@ -5,6 +5,7 @@ from typing import List, Dict, Optional
 from datetime import datetime
 import time
 import json
+import yaml
 from pathlib import Path
 from .safari_automation import SafariAutomation
 
@@ -20,6 +21,16 @@ class MapsScraper:
         else:
             print("Error: No starting link found in local/starting_link.txt")
             self.starting_url = None
+        # Initialize output file with current timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.output_file = f"outputs/places_{timestamp}.yaml"
+        self.places = []  # Keep track of places in memory
+        # Create outputs directory if it doesn't exist
+        Path("outputs").mkdir(exist_ok=True)
+        # Create empty YAML file immediately with proper format
+        with open(self.output_file, "w") as f:
+            f.write("places:\n")  # Start with a proper YAML structure
+        print(f"Created new YAML file: {self.output_file}")
 
     def navigate_to_favorites(self) -> bool:
         """
@@ -99,6 +110,9 @@ class MapsScraper:
                         const ratingEl = document.querySelector('.MW4etd');
                         const reviewCountEl = document.querySelector('.UY7F9');
                         const imageEl = document.querySelector('button[jsaction*=\\"pane.heroHeaderImage\\"] img');
+                        const descriptionEl = document.querySelector('.PYvSYb');
+                        const hoursEl = document.querySelector('button[data-item-id*=\\"oh\\"]');
+                        const priceEl = document.querySelector('button[data-item-id*=\\"price\\"]');
                         
                         const details = {{
                             name: nameEl ? nameEl.textContent.trim() : '',
@@ -108,7 +122,10 @@ class MapsScraper:
                             phone: phoneEl ? phoneEl.textContent.trim() : '',
                             rating: ratingEl ? ratingEl.textContent.trim() : '',
                             reviewCount: reviewCountEl ? reviewCountEl.textContent.replace(/[()]/g, '').trim() : '',
-                            imageUrl: imageEl ? imageEl.src : ''
+                            imageUrl: imageEl ? imageEl.src : '',
+                            description: descriptionEl ? descriptionEl.textContent.trim() : '',
+                            hours: hoursEl ? hoursEl.textContent.trim() : '',
+                            price: priceEl ? priceEl.textContent.trim() : ''
                         }};
                         console.log('Place details:', details);
                         return JSON.stringify(details);
@@ -135,13 +152,47 @@ class MapsScraper:
         try:
             result = self.safari.execute_applescript(command)
             print(f"JavaScript execution result: {result}")
-            if result:
-                return json.loads(result)
+            if result and result != "null":
+                try:
+                    details = json.loads(result)
+                    # Only return if we got actual details
+                    if details.get('name') and details.get('name') != 'Favorites':
+                        print(f"Successfully got details for: {details.get('name')}")
+                        return details
+                    else:
+                        print(f"Invalid details returned for {place_name}")
+                except json.JSONDecodeError as e:
+                    print(f"Failed to parse JSON result: {e}")
+                    print(f"Raw result: {result}")
         except Exception as e:
             print(f"Error getting place details: {e}")
-            return {}
             
         return {}
+
+    def save_place(self, place: Dict) -> bool:
+        """
+        Save a single place to the output file.
+        
+        Args:
+            place: Place details dictionary
+            
+        Returns:
+            bool: True if save was successful
+        """
+        try:
+            # Append to in-memory list
+            self.places.append(place)
+            # Write entire list to file
+            with open(self.output_file, "w") as f:
+                f.write("places:\n")  # Start with proper YAML structure
+                for p in self.places:
+                    f.write("- ")  # Start each place with a dash
+                    yaml.dump(p, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+            print(f"Saved place: {place.get('name', 'Unknown')} to {self.output_file}")
+            return True
+        except Exception as e:
+            print(f"Error saving place: {e}")
+            return False
 
     def get_saved_places(self) -> List[Dict]:
         """
@@ -150,13 +201,12 @@ class MapsScraper:
         Returns:
             List[Dict]: List of saved places with their details
         """
-        places = []
         clicked_names = set()  # Track which places we've already clicked
         
         # Navigate to the favorites list
         if not self.navigate_to_favorites():
             print("Failed to navigate to favorites")
-            return places
+            return self.places
             
         # Get all place items in the list
         print("Scraping places...")
@@ -204,8 +254,12 @@ class MapsScraper:
                     print(f"\nGetting details for place {i+1}/{len(place_list)}: {place_name}")
                     details = self.get_place_details(place_name)
                     if details:
-                        places.append(details)
-                        clicked_names.add(place_name)  # Mark this place as clicked
+                        # Save immediately after getting details
+                        if self.save_place(details):
+                            clicked_names.add(place_name)  # Only mark as clicked if save was successful
+                            print(f"Successfully saved and processed: {place_name}")
+                        else:
+                            print(f"Failed to save details for {place_name}")
                     else:
                         print(f"Failed to get details for {place_name}")
                         
@@ -213,11 +267,11 @@ class MapsScraper:
             print(f"Error scraping places: {e}")
             print(f"Result that caused error: {result}")
             
-        return places
+        return self.places
 
     def save_places_to_file(self, places: List[Dict], filename: Optional[str] = None) -> bool:
         """
-        Save scraped places to a JSON file.
+        Save scraped places to a YAML file.
         
         Args:
             places: List of place dictionaries
@@ -226,14 +280,13 @@ class MapsScraper:
         Returns:
             bool: True if save was successful
         """
-        if not filename:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"outputs/places_{timestamp}.json"
+        if filename:
+            self.output_file = filename
             
         try:
-            with open(filename, "w") as f:
-                json.dump(places, f, indent=2)
-            print(f"Saved places to {filename}")
+            with open(self.output_file, "w") as f:
+                yaml.dump(self.places, f, default_flow_style=False, sort_keys=False)
+            print(f"Saved all places to {self.output_file}")
             return True
         except Exception as e:
             print(f"Error saving places: {e}")
