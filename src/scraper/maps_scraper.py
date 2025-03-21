@@ -75,20 +75,26 @@ class MapsScraper:
                             const nameEl = item.querySelector('.fontHeadlineSmall');
                             const ratingEl = item.querySelector('.MW4etd');
                             const reviewCountEl = item.querySelector('.UY7F9');
-                            const priceEl = item.querySelector('.IIrLbb span');
-                            const typeEl = item.querySelector('.IIrLbb span:last-child');
+                            const addressEl = item.querySelector('div[role=\\"button\\"]');
+                            const typeEl = item.querySelector('.DkEaL');
                             const imageEl = item.querySelector('.WkIe8');
+                            
+                            // Skip empty entries
+                            if (!nameEl) {
+                                return null;
+                            }
+                            
                             const place = {
-                                name: nameEl ? nameEl.textContent : '',
-                                rating: ratingEl ? ratingEl.textContent : '',
-                                reviewCount: reviewCountEl ? reviewCountEl.textContent.replace(/[()]/g, '') : '',
-                                price: priceEl ? priceEl.textContent : '',
-                                type: typeEl ? typeEl.textContent.replace('· ', '') : '',
+                                name: nameEl ? nameEl.textContent.trim() : '',
+                                rating: ratingEl ? ratingEl.textContent.trim() : '',
+                                reviewCount: reviewCountEl ? reviewCountEl.textContent.replace(/[()]/g, '').trim() : '',
+                                address: addressEl ? addressEl.textContent.trim() : '',
+                                type: typeEl ? typeEl.textContent.trim() : '',
                                 imageUrl: imageEl ? imageEl.src : ''
                             };
                             console.log('Scraped place:', place);
                             return place;
-                        });
+                        }).filter(place => place !== null);
                         console.log('Returning places:', JSON.stringify(places));
                         JSON.stringify(places);
                     "
