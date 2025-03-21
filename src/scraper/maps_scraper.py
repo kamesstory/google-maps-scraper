@@ -47,6 +47,72 @@ class MapsScraper:
             
         return True
 
+    def get_place_details(self, place_button) -> Dict:
+        """
+        Click into a place and get its detailed information.
+        
+        Args:
+            place_button: The button element to click
+            
+        Returns:
+            Dict: Place details including name, address, type, etc.
+        """
+        command = f"""
+        tell application "Safari"
+            tell window 1
+                tell current tab
+                    -- Click the place button
+                    do JavaScript "
+                        const button = document.querySelector('.fontHeadlineSmall').closest('button');
+                        button.click();
+                    "
+                    
+                    -- Wait for details to load
+                    delay 3
+                    
+                    -- Get detailed information
+                    set details to do JavaScript "
+                        const nameEl = document.querySelector('h1');
+                        const addressEl = document.querySelector('button[data-item-id*=\\"address\\"]');
+                        const typeEl = document.querySelector('button[data-item-id*=\\"authority\\"]');
+                        const websiteEl = document.querySelector('a[data-item-id*=\\"authority\\"]');
+                        const phoneEl = document.querySelector('button[data-item-id*=\\"phone\\"]');
+                        const ratingEl = document.querySelector('.MW4etd');
+                        const reviewCountEl = document.querySelector('.UY7F9');
+                        const imageEl = document.querySelector('button[jsaction*=\\"pane.heroHeaderImage\\"] img');
+                        
+                        const details = {
+                            name: nameEl ? nameEl.textContent.trim() : '',
+                            address: addressEl ? addressEl.textContent.trim() : '',
+                            type: typeEl ? typeEl.textContent.trim() : '',
+                            website: websiteEl ? websiteEl.href : '',
+                            phone: phoneEl ? phoneEl.textContent.trim() : '',
+                            rating: ratingEl ? ratingEl.textContent.trim() : '',
+                            reviewCount: reviewCountEl ? reviewCountEl.textContent.replace(/[()]/g, '').trim() : '',
+                            imageUrl: imageEl ? imageEl.src : ''
+                        };
+                        console.log('Place details:', details);
+                        JSON.stringify(details);
+                    "
+                    
+                    -- Go back to the list
+                    do JavaScript "history.back();"
+                    delay 2
+                    
+                    return details
+                end tell
+            end tell
+        end tell
+        """
+        
+        try:
+            result = self.safari.execute_applescript(command)
+            if result:
+                return json.loads(result)
+        except Exception as e:
+            print(f"Error getting place details: {e}")
+            return {}
+
     def get_saved_places(self) -> List[Dict]:
         """
         Scrape saved places from the favorites list.
@@ -73,29 +139,12 @@ class MapsScraper:
                         console.log('Found ' + items.length + ' items');
                         const places = Array.from(items).map(item => {
                             const nameEl = item.querySelector('.fontHeadlineSmall');
-                            const ratingEl = item.querySelector('.MW4etd');
-                            const reviewCountEl = item.querySelector('.UY7F9');
-                            const addressEl = item.querySelector('div[role=\\"button\\"]');
-                            const typeEl = item.querySelector('.DkEaL');
-                            const imageEl = item.querySelector('.WkIe8');
-                            
-                            // Skip empty entries
-                            if (!nameEl) {
-                                return null;
-                            }
-                            
-                            const place = {
-                                name: nameEl ? nameEl.textContent.trim() : '',
-                                rating: ratingEl ? ratingEl.textContent.trim() : '',
-                                reviewCount: reviewCountEl ? reviewCountEl.textContent.replace(/[()]/g, '').trim() : '',
-                                address: addressEl ? addressEl.textContent.trim() : '',
-                                type: typeEl ? typeEl.textContent.trim() : '',
-                                imageUrl: imageEl ? imageEl.src : ''
+                            if (!nameEl) return null;
+                            return {
+                                name: nameEl.textContent.trim()
                             };
-                            console.log('Scraped place:', place);
-                            return place;
                         }).filter(place => place !== null);
-                        console.log('Returning places:', JSON.stringify(places));
+                        console.log('Found places:', places);
                         JSON.stringify(places);
                     "
                     return result
@@ -108,8 +157,18 @@ class MapsScraper:
             result = self.safari.execute_applescript(command)
             print(f"Raw result from JavaScript: {result}")
             if result:
-                places = json.loads(result)
-                print(f"Found {len(places)} places")
+                place_list = json.loads(result)
+                print(f"Found {len(place_list)} places")
+                
+                # Get details for each place
+                for i, place in enumerate(place_list):
+                    print(f"\nGetting details for place {i+1}/{len(place_list)}: {place['name']}")
+                    details = self.get_place_details(place)
+                    if details:
+                        places.append(details)
+                    else:
+                        print(f"Failed to get details for {place['name']}")
+                        
         except Exception as e:
             print(f"Error scraping places: {e}")
             print(f"Result that caused error: {result}")
