@@ -67,14 +67,16 @@ class MapsScraper:
         tell application "Safari"
             tell window 1
                 set places to do JavaScript "
-                    Array.from(document.querySelectorAll('.m6QErb')).map(item => {
+                    const items = document.querySelectorAll('.m6QErb');
+                    console.log('Found ' + items.length + ' items');
+                    const places = Array.from(items).map(item => {
                         const nameEl = item.querySelector('.fontHeadlineSmall');
                         const ratingEl = item.querySelector('.MW4etd');
                         const reviewCountEl = item.querySelector('.UY7F9');
                         const priceEl = item.querySelector('.IIrLbb span');
                         const typeEl = item.querySelector('.IIrLbb span:last-child');
                         const imageEl = item.querySelector('.WkIe8');
-                        return {
+                        const place = {
                             name: nameEl ? nameEl.textContent : '',
                             rating: ratingEl ? ratingEl.textContent : '',
                             reviewCount: reviewCountEl ? reviewCountEl.textContent.replace(/[()]/g, '') : '',
@@ -82,7 +84,11 @@ class MapsScraper:
                             type: typeEl ? typeEl.textContent.replace('· ', '') : '',
                             imageUrl: imageEl ? imageEl.src : ''
                         };
+                        console.log('Scraped place:', place);
+                        return place;
                     });
+                    console.log('Returning places:', JSON.stringify(places));
+                    return JSON.stringify(places);
                 " in current tab
                 return places
             end tell
@@ -91,11 +97,13 @@ class MapsScraper:
         
         try:
             result = self.safari.execute_applescript(command)
+            print(f"Raw result from JavaScript: {result}")
             if result:
                 places = json.loads(result)
                 print(f"Found {len(places)} places")
         except Exception as e:
             print(f"Error scraping places: {e}")
+            print(f"Result that caused error: {result}")
             
         return places
 
