@@ -67,13 +67,20 @@ class MapsScraper:
         tell application "Safari"
             tell window 1
                 set places to do JavaScript "
-                    Array.from(document.querySelectorAll('div[role=\\"listitem\\"]')).map(item => {
-                        const nameEl = item.querySelector('div[role=\\"heading\\"]');
-                        const addressEl = item.querySelector('div[role=\\"button\\"]');
+                    Array.from(document.querySelectorAll('.m6QErb')).map(item => {
+                        const nameEl = item.querySelector('.fontHeadlineSmall');
+                        const ratingEl = item.querySelector('.MW4etd');
+                        const reviewCountEl = item.querySelector('.UY7F9');
+                        const priceEl = item.querySelector('.IIrLbb span');
+                        const typeEl = item.querySelector('.IIrLbb span:last-child');
+                        const imageEl = item.querySelector('.WkIe8');
                         return {
                             name: nameEl ? nameEl.textContent : '',
-                            address: addressEl ? addressEl.textContent : '',
-                            url: item.querySelector('a') ? item.querySelector('a').href : ''
+                            rating: ratingEl ? ratingEl.textContent : '',
+                            reviewCount: reviewCountEl ? reviewCountEl.textContent.replace(/[()]/g, '') : '',
+                            price: priceEl ? priceEl.textContent : '',
+                            type: typeEl ? typeEl.textContent.replace('· ', '') : '',
+                            imageUrl: imageEl ? imageEl.src : ''
                         };
                     });
                 " in current tab
