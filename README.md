@@ -1,30 +1,33 @@
-# Google Maps Saved Places Manager
+# Google Maps Place Scraper
 
-This project helps manage and organize Google Maps saved places by:
+A tool to scrape and organize saved places from Google Maps.
 
-1. Scraping saved places from Google Maps Favorites
-2. Filtering out invalid or outdated entries
-3. Organizing places into region-based lists
-4. Automatically adding places to new Google Maps lists
+## Progress (March 18, 2024)
 
-## Project Structure
+✅ Successfully implemented:
 
-- `src/` - Source code directory
-  - `scraper/` - Google Maps scraping functionality
-  - `processor/` - Data processing and filtering
-  - `organizer/` - List organization and management
-  - `automation/` - AppleScript automation for browser control
-- `outputs/` - Directory for storing scraped data and processed results
-- `tests/` - Test files
-- `requirements.txt` - Python dependencies
+- Basic project structure with Python scraper
+- Safari automation using AppleScript
+- Navigation to favorites list
+- Finding and clicking unique places in the list
+- Deduplication of places using Set
+- Proper panel closing using back button
+
+🔄 Next steps:
+
+- Need to update selectors for details panel based on `@item_details.html` structure
+- Implement filtering of bad saved entries
+- Group places by region/country
+- Create new lists in Google Maps
+- Add places to their respective lists
 
 ## Setup
 
 1. Create and activate virtual environment:
 
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Unix/macOS
+   python3 -m venv venv
+   source venv/bin/activate
    ```
 
 2. Install dependencies:
@@ -32,25 +35,62 @@ This project helps manage and organize Google Maps saved places by:
    pip install -r requirements.txt
    ```
 
-## Usage
+## Running the Scraper
 
-1. Ensure you're logged into Google Maps in Safari
-2. Run the scraper to collect saved places
-3. Process and filter the data
-4. Create new lists in Google Maps
-5. Use the automation script to add places to lists
+1. Open Safari and log into Google Maps
+2. Navigate to any Google Maps page
+3. Run the test script:
+   ```bash
+   python3 src/test_scraper.py
+   ```
 
-## Development Status
+## Implementation Notes
 
-- [ ] Basic project structure
-- [ ] Safari automation setup
-- [ ] Google Maps scraping implementation
-- [ ] Data processing and filtering
-- [ ] List organization
-- [ ] Automated list population
+### Current Scraping Flow
+
+1. Navigate to favorites list
+2. Find all unique places using `.m6QErb` container and `.fontHeadlineSmall` for names
+3. Click each unique place using `.SMP2wb.fHEb6e` button
+4. Extract details from panel (selectors to be updated based on `@item_details.html`)
+5. Close panel using back button
+6. Continue to next place
+
+### Debugging Tips
+
+- Console logs are added throughout JavaScript execution
+- Python prints progress and any errors
+- Check Safari's Web Inspector for element structure
+
+### Known Working Elements
+
+From `local/sample_list_item.html`:
+
+```html
+<div class="m6QErb XiKgde">
+  <button class="SMP2wb fHEb6e">
+    <div class="fontHeadlineSmall">Place Name</div>
+    ...
+  </button>
+</div>
+```
+
+## Git Checkpoints
+
+Latest working commits:
+
+1. Successfully clicking into places using correct button selectors
+2. Successfully detecting and clicking unique places using Set
+3. Improved details panel handling using back button
+
+## Tomorrow's Tasks
+
+1. Get `@item_details.html` structure
+2. Update selectors for extracting place details
+3. Implement data validation and filtering
+4. Begin work on place categorization
 
 ## Notes
 
-- This project uses AppleScript for browser automation
-- Data is stored locally in the outputs directory
-- Regular backups of scraped data are recommended
+- Safari must be logged into Google Maps
+- Keep Safari as the frontmost window while scraping
+- Each place takes about 7 seconds to process (5s load + 2s close)
