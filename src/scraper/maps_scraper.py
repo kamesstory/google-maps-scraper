@@ -47,12 +47,12 @@ class MapsScraper:
             
         return True
 
-    def get_place_details(self, place_button) -> Dict:
+    def get_place_details(self, place_name: str) -> Dict:
         """
         Click into a place and get its detailed information.
         
         Args:
-            place_button: The button element to click
+            place_name: The name of the place to click
             
         Returns:
             Dict: Place details including name, address, type, etc.
@@ -63,8 +63,14 @@ class MapsScraper:
                 tell current tab
                     -- Click the place button
                     do JavaScript "
-                        const button = document.querySelector('.fontHeadlineSmall').closest('button');
-                        button.click();
+                        const buttons = Array.from(document.querySelectorAll('.fontHeadlineSmall')).filter(el => el.textContent.trim() === '{place_name}');
+                        if (buttons.length > 0) {{
+                            const button = buttons[0].closest('button');
+                            button.click();
+                            true;
+                        }} else {{
+                            false;
+                        }}
                     "
                     
                     -- Wait for details to load
@@ -163,7 +169,7 @@ class MapsScraper:
                 # Get details for each place
                 for i, place in enumerate(place_list):
                     print(f"\nGetting details for place {i+1}/{len(place_list)}: {place['name']}")
-                    details = self.get_place_details(place)
+                    details = self.get_place_details(place['name'])
                     if details:
                         places.append(details)
                     else:
