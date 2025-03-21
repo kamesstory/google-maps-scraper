@@ -11,14 +11,15 @@ A tool to scrape and organize saved places from Google Maps.
 - Navigation to favorites list
 - Finding and clicking unique places in the list
 - Deduplication of places using Set
-- Proper panel closing using back button
+- Writing places into local outputs YAML file
 
-🔄 Next steps:
+🔄 Next steps (in order):
 
-- Need to update selectors for details panel based on `@item_details.html` structure
+- Add new items that scroll into view as we click down the existing list
+- Add more details to extract from the item details panel
 - Implement filtering of bad saved entries. For "Want to Go", this is basically all places that were saved without any notes.
 - Group places by region/country. For travel countries like Italy or Japan, group by country. For USA, group by broad region (e.g. SoCal, Bay Area, NYC). Otherwise, fallback to a general group called "Liked".
-- Create new lists in Google Maps. New lists should be
+- Create new lists in Google Maps
 - Add places to their respective lists
 
 ## Setup
