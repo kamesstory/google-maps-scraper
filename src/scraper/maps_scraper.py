@@ -18,16 +18,21 @@ class MapsScraper:
             with open(starting_link_path, "r") as f:
                 self.starting_url = f.read().strip()
         else:
-            self.starting_url = f"{self.base_url}/saved"
+            print("Error: No starting link found in local/starting_link.txt")
+            self.starting_url = None
 
-    def navigate_to_saved_places(self) -> bool:
+    def navigate_to_favorites(self) -> bool:
         """
-        Navigate to Google Maps saved places page.
+        Navigate to the favorites list URL.
         
         Returns:
             bool: True if navigation was successful
         """
-        print(f"Navigating to: {self.starting_url}")
+        if not self.starting_url:
+            print("Error: No starting URL configured")
+            return False
+            
+        print(f"Navigating to favorites list...")
         if not self.safari.navigate_to_url(self.starting_url):
             print("Failed to navigate to URL")
             return False
@@ -44,35 +49,25 @@ class MapsScraper:
 
     def get_saved_places(self) -> List[Dict]:
         """
-        Scrape saved places from Google Maps.
+        Scrape saved places from the favorites list.
         
         Returns:
             List[Dict]: List of saved places with their details
         """
         places = []
         
-        # Navigate to the page
-        if not self.navigate_to_saved_places():
-            print("Failed to navigate to saved places")
+        # Navigate to the favorites list
+        if not self.navigate_to_favorites():
+            print("Failed to navigate to favorites")
             return places
             
-        # Get the current URL to verify we're on the right page
-        current_url = self.safari.get_current_url()
-        print(f"Current URL: {current_url}")
-        
-        # Wait for favorites section to load
-        print("Waiting for favorites section...")
-        if not self.safari.wait_for_element('div[aria-label="Favorites"]'):
-            print("Warning: Favorites section not found")
-            return places
-            
-        # Get all place items in the favorites section
-        print("Scraping favorites...")
+        # Get all place items in the list
+        print("Scraping places...")
         command = """
         tell application "Safari"
             tell window 1
                 set places to do JavaScript "
-                    Array.from(document.querySelectorAll('div[aria-label=\\"Favorites\\"] div[role=\\"listitem\\"]')).map(item => {
+                    Array.from(document.querySelectorAll('div[role=\\"listitem\\"]')).map(item => {
                         const nameEl = item.querySelector('div[role=\\"heading\\"]');
                         const addressEl = item.querySelector('div[role=\\"button\\"]');
                         return {
@@ -91,7 +86,7 @@ class MapsScraper:
             result = self.safari.execute_applescript(command)
             if result:
                 places = json.loads(result)
-                print(f"Found {len(places)} places in favorites")
+                print(f"Found {len(places)} places")
         except Exception as e:
             print(f"Error scraping places: {e}")
             
