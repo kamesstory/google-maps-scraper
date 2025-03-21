@@ -32,52 +32,15 @@ class MapsScraper:
             print("Failed to navigate to URL")
             return False
             
-        # Wait for page to load
-        print("Waiting for page to load...")
-        if not self.wait_for_page_load():
-            print("Page load timeout")
-            return False
+        # Simple static wait for page to load
+        print("Waiting 5 seconds for page to load...")
+        time.sleep(5)
             
         # Get the current URL to verify we're on the right page
         current_url = self.safari.get_current_url()
         print(f"Current URL: {current_url}")
-        
-        # Skip login check since we're always logged in
-        # print("Checking login state...")
-        # if not self.safari.check_login_state():
-        #     print("Error: Not logged into Google Maps. Please ensure you're logged in with jhw513@gmail.com")
-        #     return False
             
         return True
-
-    def wait_for_page_load(self, timeout: int = 10) -> bool:
-        """
-        Wait for the page to load using AppleScript.
-        
-        Args:
-            timeout: Maximum time to wait in seconds
-            
-        Returns:
-            bool: True if page loaded successfully
-        """
-        command = """
-        tell application "Safari"
-            tell window 1
-                repeat until (do JavaScript "document.readyState === 'complete'" in current tab) is "true"
-                    delay 0.5
-                end repeat
-                return true
-            end tell
-        end tell
-        """
-        try:
-            self.safari.execute_applescript(command)
-            # Add a small delay to ensure dynamic content starts loading
-            time.sleep(1)
-            return True
-        except Exception as e:
-            print(f"Error waiting for page load: {e}")
-            return False
 
     def get_saved_places(self) -> List[Dict]:
         """
