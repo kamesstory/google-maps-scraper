@@ -102,7 +102,7 @@ class MapsScraper:
                     -- Get detailed information
                     set details to do JavaScript "(() => {{
                         console.log('Getting place details...');
-                        const nameEl = document.querySelector('h1');
+                        const nameEl = document.querySelector('h1.DUwDvf');
                         const addressEl = document.querySelector('button[data-item-id*=\\"address\\"]');
                         const typeEl = document.querySelector('button[data-item-id*=\\"authority\\"]');
                         const website = document.querySelector('a[data-item-id*=\\"authority\\"]');
@@ -154,13 +154,9 @@ class MapsScraper:
             print(f"JavaScript execution result: {result}")
             if result and result != "null":
                 try:
-                    details = json.loads(result)
-                    # Only return if we got actual details
-                    if details.get('name') and details.get('name') != 'Favorites':
-                        print(f"Successfully got details for: {details.get('name')}")
-                        return details
-                    else:
-                        print(f"Invalid details returned for {place_name}")
+                    # Clean up the result string - remove any extra quotes or whitespace
+                    result = result.strip().strip('"')
+                    return json.loads(result)
                 except json.JSONDecodeError as e:
                     print(f"Failed to parse JSON result: {e}")
                     print(f"Raw result: {result}")
