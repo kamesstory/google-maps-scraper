@@ -143,6 +143,7 @@ class MapsScraper:
             List[Dict]: List of saved places with their details
         """
         places = []
+        clicked_names = set()  # Track which places we've already clicked
         
         # Navigate to the favorites list
         if not self.navigate_to_favorites():
@@ -153,20 +154,23 @@ class MapsScraper:
         print("Scraping places...")
         command = """
         tell application "Safari"
-            activate
             tell window 1
                 tell current tab
                     set result to do JavaScript "
                         const items = document.querySelectorAll('.m6QErb');
                         console.log('Found ' + items.length + ' items');
+                        const seen = new Set();
                         const places = Array.from(items).map(item => {
                             const nameEl = item.querySelector('.fontHeadlineSmall');
                             if (!nameEl) return null;
+                            const name = nameEl.textContent.trim();
+                            if (seen.has(name)) return null;
+                            seen.add(name);
                             return {
-                                name: nameEl.textContent.trim()
+                                name: name
                             };
                         }).filter(place => place !== null);
-                        console.log('Found places:', places);
+                        console.log('Found unique places:', places);
                         JSON.stringify(places);
                     "
                     return result
@@ -180,16 +184,22 @@ class MapsScraper:
             print(f"Raw result from JavaScript: {result}")
             if result:
                 place_list = json.loads(result)
-                print(f"Found {len(place_list)} places")
+                print(f"Found {len(place_list)} unique places")
                 
                 # Get details for each place
                 for i, place in enumerate(place_list):
-                    print(f"\nGetting details for place {i+1}/{len(place_list)}: {place['name']}")
-                    details = self.get_place_details(place['name'])
+                    place_name = place.get('name', '').strip()
+                    if not place_name or place_name in clicked_names:
+                        print(f"Skipping place {i+1}: already clicked or invalid name")
+                        continue
+                        
+                    print(f"\nGetting details for place {i+1}/{len(place_list)}: {place_name}")
+                    details = self.get_place_details(place_name)
                     if details:
                         places.append(details)
+                        clicked_names.add(place_name)  # Mark this place as clicked
                     else:
-                        print(f"Failed to get details for {place['name']}")
+                        print(f"Failed to get details for {place_name}")
                         
         except Exception as e:
             print(f"Error scraping places: {e}")
