@@ -1,3 +1,5 @@
 outputs/
 local/
 .cursor/
+__pycache__/
+venv/
