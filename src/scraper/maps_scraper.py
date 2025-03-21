@@ -57,53 +57,66 @@ class MapsScraper:
         Returns:
             Dict: Place details including name, address, type, etc.
         """
+        print(f"\nAttempting to click place: {place_name}")
+        
         command = f"""
         tell application "Safari"
             tell window 1
                 tell current tab
-                    -- Click the place button
-                    do JavaScript "
-                        const buttons = Array.from(document.querySelectorAll('.fontHeadlineSmall')).filter(el => el.textContent.trim() === '{place_name}');
-                        if (buttons.length > 0) {{
-                            const button = buttons[0].closest('button');
-                            button.click();
-                            true;
-                        }} else {{
-                            false;
+                    -- Click the button using the exact structure from the sample HTML
+                    do JavaScript "(() => {{
+                        console.log('Looking for place:', '{place_name}');
+                        const buttons = Array.from(document.querySelectorAll('.SMP2wb.fHEb6e'));
+                        console.log('Found buttons:', buttons.length);
+                        
+                        for (const button of buttons) {{
+                            const nameEl = button.querySelector('.fontHeadlineSmall');
+                            if (nameEl) {{
+                                const name = nameEl.textContent.trim();
+                                console.log('Checking button:', name);
+                                if (name === '{place_name}') {{
+                                    console.log('Found matching button, clicking...');
+                                    button.click();
+                                    return true;
+                                }}
+                            }}
                         }}
-                    "
+                        console.log('No matching button found');
+                        return false;
+                    }})();"
                     
-                    -- Wait for details to load
-                    delay 3
+                    -- Wait longer for details to load
+                    delay 5
                     
                     -- Get detailed information
-                    set details to do JavaScript "
+                    set details to do JavaScript "(() => {{
+                        console.log('Getting place details...');
                         const nameEl = document.querySelector('h1');
                         const addressEl = document.querySelector('button[data-item-id*=\\"address\\"]');
                         const typeEl = document.querySelector('button[data-item-id*=\\"authority\\"]');
-                        const websiteEl = document.querySelector('a[data-item-id*=\\"authority\\"]');
+                        const website = document.querySelector('a[data-item-id*=\\"authority\\"]');
                         const phoneEl = document.querySelector('button[data-item-id*=\\"phone\\"]');
                         const ratingEl = document.querySelector('.MW4etd');
                         const reviewCountEl = document.querySelector('.UY7F9');
                         const imageEl = document.querySelector('button[jsaction*=\\"pane.heroHeaderImage\\"] img');
                         
-                        const details = {
+                        const details = {{
                             name: nameEl ? nameEl.textContent.trim() : '',
                             address: addressEl ? addressEl.textContent.trim() : '',
                             type: typeEl ? typeEl.textContent.trim() : '',
-                            website: websiteEl ? websiteEl.href : '',
+                            website: website ? website.href : '',
                             phone: phoneEl ? phoneEl.textContent.trim() : '',
                             rating: ratingEl ? ratingEl.textContent.trim() : '',
                             reviewCount: reviewCountEl ? reviewCountEl.textContent.replace(/[()]/g, '').trim() : '',
                             imageUrl: imageEl ? imageEl.src : ''
-                        };
+                        }};
                         console.log('Place details:', details);
-                        JSON.stringify(details);
-                    "
+                        return JSON.stringify(details);
+                    }})();"
                     
-                    -- Go back to the list
-                    do JavaScript "history.back();"
-                    delay 2
+                    -- Go back to the list and wait longer
+                    do JavaScript "(() => {{ history.back(); }})();"
+                    delay 4
                     
                     return details
                 end tell
@@ -113,11 +126,14 @@ class MapsScraper:
         
         try:
             result = self.safari.execute_applescript(command)
+            print(f"JavaScript execution result: {result}")
             if result:
                 return json.loads(result)
         except Exception as e:
             print(f"Error getting place details: {e}")
             return {}
+            
+        return {}
 
     def get_saved_places(self) -> List[Dict]:
         """
