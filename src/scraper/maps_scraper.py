@@ -165,31 +165,6 @@ class MapsScraper:
             
         return {}
 
-    def save_place(self, place: Dict) -> bool:
-        """
-        Save a single place to the output file.
-        
-        Args:
-            place: Place details dictionary
-            
-        Returns:
-            bool: True if save was successful
-        """
-        try:
-            # Append to in-memory list
-            self.places.append(place)
-            # Write entire list to file
-            with open(self.output_file, "w") as f:
-                f.write("places:\n")  # Start with proper YAML structure
-                for p in self.places:
-                    f.write("- ")  # Start each place with a dash
-                    yaml.dump(p, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
-            print(f"Saved place: {place.get('name', 'Unknown')} to {self.output_file}")
-            return True
-        except Exception as e:
-            print(f"Error saving place: {e}")
-            return False
-
     def get_saved_places(self) -> List[Dict]:
         """
         Scrape saved places from the favorites list.
@@ -250,12 +225,11 @@ class MapsScraper:
                     print(f"\nGetting details for place {i+1}/{len(place_list)}: {place_name}")
                     details = self.get_place_details(place_name)
                     if details:
-                        # Save immediately after getting details
-                        if self.save_place(details):
-                            clicked_names.add(place_name)  # Only mark as clicked if save was successful
-                            print(f"Successfully saved and processed: {place_name}")
-                        else:
-                            print(f"Failed to save details for {place_name}")
+                        # Append to in-memory list and save immediately
+                        self.places.append(details)
+                        self.save_places_to_file(self.places)
+                        clicked_names.add(place_name)
+                        print(f"Successfully saved and processed: {place_name}")
                     else:
                         print(f"Failed to get details for {place_name}")
                         
@@ -265,25 +239,31 @@ class MapsScraper:
             
         return self.places
 
-    def save_places_to_file(self, places: List[Dict], filename: Optional[str] = None) -> bool:
-        """
-        Save scraped places to a YAML file.
-        
-        Args:
-            places: List of place dictionaries
-            filename: Optional custom filename
-            
-        Returns:
-            bool: True if save was successful
-        """
-        if filename:
-            self.output_file = filename
-            
+    def save_places_to_file(self, places: List[Dict]) -> None:
+        """Save scraped places to a YAML file."""
         try:
-            with open(self.output_file, "w") as f:
-                yaml.dump(self.places, f, default_flow_style=False, sort_keys=False)
-            print(f"Saved all places to {self.output_file}")
-            return True
+            # Clean up the data before writing
+            cleaned_places = []
+            for place in places:
+                cleaned_place = {}
+                for key, value in place.items():
+                    if isinstance(value, str):
+                        # Remove any weird Unicode characters and extra whitespace
+                        value = ''.join(char for char in value if ord(char) < 65536).strip()
+                    cleaned_place[key] = value
+                cleaned_places.append(cleaned_place)
+
+            # Write with proper YAML formatting
+            with open(self.output_file, 'w', encoding='utf-8') as f:
+                f.write("places:\n")
+                for place in cleaned_places:
+                    f.write("  - name: " + place.get('name', '') + "\n")
+                    for key, value in place.items():
+                        if key != 'name':  # Skip name since we already wrote it
+                            if isinstance(value, str) and value:  # Only write non-empty strings
+                                f.write(f"    {key}: {value}\n")
+                    f.write("\n")  # Add blank line between places
+                    
+            print(f"Successfully saved {len(cleaned_places)} places to {self.output_file}")
         except Exception as e:
-            print(f"Error saving places: {e}")
-            return False 
+            print(f"Error saving places to file: {e}") 
