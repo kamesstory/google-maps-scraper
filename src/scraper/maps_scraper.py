@@ -114,9 +114,17 @@ class MapsScraper:
                         return JSON.stringify(details);
                     }})();"
                     
-                    -- Go back to the list and wait longer
-                    do JavaScript "(() => {{ history.back(); }})();"
-                    delay 4
+                    -- Click the back button to close the details panel
+                    do JavaScript "(() => {{
+                        const backButton = document.querySelector('button[jsaction*=\\"pane.back\\"]');
+                        if (backButton) {{
+                            backButton.click();
+                            return true;
+                        }}
+                        return false;
+                    }})();"
+                    
+                    delay 2
                     
                     return details
                 end tell
