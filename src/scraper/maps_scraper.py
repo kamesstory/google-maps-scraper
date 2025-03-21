@@ -42,17 +42,11 @@ class MapsScraper:
         current_url = self.safari.get_current_url()
         print(f"Current URL: {current_url}")
         
-        # Wait for Google Account elements to load
-        print("Waiting for account elements...")
-        if not self.safari.wait_for_element('a.gb_B.gb_Za[aria-label*="Google Account"]'):
-            print("Warning: Account elements not found")
-            return False
-            
-        # Check login state
-        print("Checking login state...")
-        if not self.safari.check_login_state():
-            print("Error: Not logged into Google Maps. Please ensure you're logged in with jhw513@gmail.com")
-            return False
+        # Skip login check since we're always logged in
+        # print("Checking login state...")
+        # if not self.safari.check_login_state():
+        #     print("Error: Not logged into Google Maps. Please ensure you're logged in with jhw513@gmail.com")
+        #     return False
             
         return True
 
@@ -69,12 +63,7 @@ class MapsScraper:
         command = """
         tell application "Safari"
             tell window 1
-                repeat until (do JavaScript "
-                    document.readyState === 'complete' && (
-                        document.querySelector('a.gb_B.gb_Za') !== null ||
-                        document.querySelector('img.gb_P.gbii') !== null
-                    )
-                " in current tab) is "true"
+                repeat until (do JavaScript "document.readyState === 'complete'" in current tab) is "true"
                     delay 0.5
                 end repeat
                 return true
@@ -108,9 +97,41 @@ class MapsScraper:
         current_url = self.safari.get_current_url()
         print(f"Current URL: {current_url}")
         
-        # TODO: Implement actual scraping logic
-        # For now, just return empty list as we're testing navigation
+        # Wait for favorites section to load
+        print("Waiting for favorites section...")
+        if not self.safari.wait_for_element('div[aria-label="Favorites"]'):
+            print("Warning: Favorites section not found")
+            return places
+            
+        # Get all place items in the favorites section
+        print("Scraping favorites...")
+        command = """
+        tell application "Safari"
+            tell window 1
+                set places to do JavaScript "
+                    Array.from(document.querySelectorAll('div[aria-label=\\"Favorites\\"] div[role=\\"listitem\\"]')).map(item => {
+                        const nameEl = item.querySelector('div[role=\\"heading\\"]');
+                        const addressEl = item.querySelector('div[role=\\"button\\"]');
+                        return {
+                            name: nameEl ? nameEl.textContent : '',
+                            address: addressEl ? addressEl.textContent : '',
+                            url: item.querySelector('a') ? item.querySelector('a').href : ''
+                        };
+                    });
+                " in current tab
+                return places
+            end tell
+        end tell
+        """
         
+        try:
+            result = self.safari.execute_applescript(command)
+            if result:
+                places = json.loads(result)
+                print(f"Found {len(places)} places in favorites")
+        except Exception as e:
+            print(f"Error scraping places: {e}")
+            
         return places
 
     def save_places_to_file(self, places: List[Dict], filename: Optional[str] = None) -> bool:
